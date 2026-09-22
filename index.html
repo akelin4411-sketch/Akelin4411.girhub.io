@@ -1,0 +1,1592 @@
+const CONFIG = {
+  siteName: "GLOBAL",
+  slogan: "Твоя следующая точка — весь мир.",
+  priceFrom: "$5,000",
+  telegramChatId: "325711503",
+
+  phone1: "+998 93 069 44 19",
+  phone2: "+998 93 600 44 11",
+
+  // Временно. Потом заменим на окончательный список.
+  countries: [
+    "Великобритания",
+    "США",
+    "Канада",
+    "Австралия",
+    "Германия",
+    "ОАЭ",
+    "Турция"
+  ]
+};
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    // =========================
+    // TELEGRAM APPLICATION
+    // =========================
+    if (request.method === "POST" && url.pathname === "/api/apply") {
+      try {
+        const data = await request.json();
+
+        const name = clean(data.name);
+        const type = clean(data.type);
+        const age = clean(data.age);
+        const goal = clean(data.goal);
+        const country = clean(data.country);
+        const budget = clean(data.budget);
+        const phone = clean(data.phone);
+        const message = clean(data.message);
+
+        if (!name || !phone || !type) {
+          return json({
+            ok: false,
+            message: "Заполните обязательные поля."
+          }, 400);
+        }
+
+        if (!env.TELEGRAM_BOT_TOKEN) {
+          return json({
+            ok: false,
+            message: "Telegram не настроен."
+          }, 500);
+        }
+
+        const telegramText =
+`🔔 <b>НОВАЯ ЗАЯВКА — ${escapeHtml(CONFIG.siteName)}</b>
+
+👤 <b>Имя:</b> ${escapeHtml(name)}
+🎓 <b>Кто:</b> ${escapeHtml(type)}
+🎂 <b>Возраст:</b> ${escapeHtml(age || "Не указано")}
+🎯 <b>Цель:</b> ${escapeHtml(goal || "Не указано")}
+🌍 <b>Страна:</b> ${escapeHtml(country || "Не выбрана")}
+💰 <b>Бюджет:</b> ${escapeHtml(budget || "Не указан")}
+📞 <b>Телефон:</b> ${escapeHtml(phone)}
+
+💬 <b>Дополнительно:</b>
+${escapeHtml(message || "Нет дополнительного сообщения")}
+
+⏰ ${new Date().toLocaleString("ru-RU", {
+  timeZone: "Asia/Tashkent"
+})}`;
+
+        const telegramResponse = await fetch(
+          `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              chat_id: CONFIG.telegramChatId,
+              text: telegramText,
+              parse_mode: "HTML"
+            })
+          }
+        );
+
+        const telegramResult = await telegramResponse.json();
+
+        if (!telegramResponse.ok || !telegramResult.ok) {
+          return json({
+            ok: false,
+            message: "Не удалось отправить заявку. Попробуйте ещё раз."
+          }, 500);
+        }
+
+        return json({
+          ok: true,
+          message: "Заявка успешно отправлена."
+        });
+
+      } catch (error) {
+        return json({
+          ok: false,
+          message: "Ошибка сервера."
+        }, 500);
+      }
+    }
+
+    // =========================
+    // WEBSITE
+    // =========================
+    if (request.method === "GET") {
+      return new Response(html(), {
+        headers: {
+          "Content-Type": "text/html; charset=UTF-8"
+        }
+      });
+    }
+
+    return new Response("Not found", { status: 404 });
+  }
+};
+
+
+// =========================
+// HELPERS
+// =========================
+
+function clean(value) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim().slice(0, 1000);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=UTF-8"
+    }
+  });
+}
+
+
+// =========================
+// HTML
+// =========================
+
+function html() {
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>${CONFIG.siteName} — ${CONFIG.slogan}</title>
+
+<meta name="description"
+content="Международные образовательные программы для школьников, студентов, выпускников и взрослых.">
+
+<style>
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+  background: #ffffff;
+  color: #0b1730;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  width: min(1160px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+/* ================= HEADER ================= */
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  background: rgba(255,255,255,.94);
+  backdrop-filter: blur(14px);
+
+  border-bottom: 1px solid #e8edf5;
+}
+
+.nav {
+  height: 76px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -.8px;
+}
+
+.logo span {
+  color: #3478f6;
+}
+
+.nav-links {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nav-button {
+  background: #0b1730;
+  color: white;
+
+  padding: 12px 20px;
+  border-radius: 10px;
+
+  transition: .2s;
+}
+
+.nav-button:hover {
+  transform: translateY(-2px);
+}
+
+/* ================= HERO ================= */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+
+  background:
+    radial-gradient(circle at 80% 20%, rgba(53,120,246,.16), transparent 32%),
+    linear-gradient(135deg, #f7faff 0%, #ffffff 60%);
+
+  padding: 105px 0 90px;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 70px;
+  align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+
+  padding: 8px 13px;
+  border-radius: 100px;
+
+  background: #edf4ff;
+  color: #2868d8;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  margin-bottom: 22px;
+}
+
+h1 {
+  font-size: clamp(46px, 6vw, 76px);
+  line-height: .98;
+  letter-spacing: -3px;
+
+  max-width: 720px;
+
+  margin-bottom: 25px;
+}
+
+.hero-title {
+  color: #3478f6;
+}
+
+.hero-description {
+  font-size: 20px;
+  color: #5d6a7e;
+
+  max-width: 650px;
+
+  margin-bottom: 32px;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+}
+
+.primary {
+  border: none;
+  cursor: pointer;
+
+  background: #0b1730;
+  color: white;
+
+  padding: 16px 24px;
+  border-radius: 12px;
+
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.secondary {
+  padding: 15px 23px;
+  border-radius: 12px;
+
+  border: 1px solid #dce4ef;
+
+  font-weight: 700;
+}
+
+.trust {
+  margin-top: 30px;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+
+  color: #69768a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hero-card {
+  min-height: 430px;
+
+  border-radius: 30px;
+
+  background:
+    linear-gradient(145deg, #0b1730, #162e56);
+
+  padding: 30px;
+
+  color: white;
+
+  box-shadow: 0 30px 70px rgba(11,23,48,.18);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.earth {
+  font-size: 100px;
+  text-align: center;
+  margin-top: 35px;
+}
+
+.hero-card-title {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.hero-card-small {
+  color: #b8c9e4;
+  font-size: 14px;
+}
+
+/* ================= SECTIONS ================= */
+
+section {
+  padding: 95px 0;
+}
+
+.section-label {
+  color: #3478f6;
+  font-size: 13px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+
+  margin-bottom: 12px;
+}
+
+h2 {
+  font-size: clamp(32px, 4vw, 50px);
+  line-height: 1.05;
+  letter-spacing: -1.8px;
+
+  margin-bottom: 18px;
+}
+
+.section-description {
+  max-width: 680px;
+
+  color: #667386;
+  font-size: 17px;
+}
+
+/* ================= SPECIAL ================= */
+
+.special {
+  background: #0b1730;
+  color: white;
+}
+
+.special-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 60px;
+  align-items: center;
+}
+
+.special p {
+  color: #c2cee0;
+}
+
+.steps {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.step {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+
+  padding: 13px 15px;
+
+  background: rgba(255,255,255,.07);
+
+  border: 1px solid rgba(255,255,255,.08);
+
+  border-radius: 12px;
+}
+
+.step-number {
+  width: 30px;
+  height: 30px;
+
+  border-radius: 50%;
+
+  background: #3478f6;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 800;
+}
+
+/* ================= CARDS ================= */
+
+.cards {
+  margin-top: 42px;
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 17px;
+}
+
+.card {
+  padding: 25px;
+
+  border: 1px solid #e5eaf2;
+  border-radius: 18px;
+
+  background: white;
+
+  transition: .2s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+
+  box-shadow: 0 18px 45px rgba(22,45,75,.08);
+}
+
+.card-icon {
+  font-size: 30px;
+  margin-bottom: 20px;
+}
+
+.card h3 {
+  font-size: 18px;
+  margin-bottom: 9px;
+}
+
+.card p {
+  color: #6b7788;
+  font-size: 14px;
+}
+
+/* ================= COUNTRIES ================= */
+
+.countries {
+  background: #f7f9fc;
+}
+
+.country-grid {
+  margin-top: 40px;
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 15px;
+}
+
+.country {
+  padding: 23px;
+
+  background: white;
+
+  border-radius: 17px;
+
+  border: 1px solid #e4eaf2;
+
+  font-weight: 800;
+}
+
+.country small {
+  display: block;
+
+  color: #7c8797;
+
+  font-weight: 500;
+
+  margin-top: 5px;
+}
+
+/* ================= PROCESS ================= */
+
+.process {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 18px;
+
+  margin-top: 40px;
+}
+
+.process-item {
+  padding: 28px;
+
+  border-radius: 18px;
+
+  background: #f7f9fc;
+}
+
+.process-number {
+  font-size: 13px;
+  font-weight: 900;
+
+  color: #3478f6;
+
+  margin-bottom: 15px;
+}
+
+/* ================= PRICE ================= */
+
+.price-box {
+  margin-top: 38px;
+
+  padding: 35px;
+
+  border-radius: 23px;
+
+  background: linear-gradient(135deg, #f0f6ff, #ffffff);
+
+  border: 1px solid #dce8fa;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 30px;
+}
+
+.price {
+  font-size: 40px;
+  font-weight: 900;
+}
+
+.price-note {
+  color: #69768a;
+  font-size: 14px;
+}
+
+/* ================= FORM ================= */
+
+.form-section {
+  background: #f7f9fc;
+}
+
+.form-wrapper {
+  max-width: 850px;
+  margin: 40px auto 0;
+
+  background: white;
+
+  padding: 35px;
+
+  border-radius: 24px;
+
+  border: 1px solid #e2e8f1;
+
+  box-shadow: 0 20px 60px rgba(22,45,75,.06);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 15px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+label {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+
+  padding: 14px 15px;
+
+  border: 1px solid #dce3ed;
+
+  border-radius: 10px;
+
+  outline: none;
+
+  font: inherit;
+
+  background: white;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #3478f6;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.submit {
+  width: 100%;
+
+  margin-top: 18px;
+
+  padding: 16px;
+
+  border: none;
+
+  border-radius: 11px;
+
+  background: #0b1730;
+
+  color: white;
+
+  font-size: 15px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.form-status {
+  text-align: center;
+
+  margin-top: 15px;
+
+  font-weight: 700;
+}
+
+/* ================= CONTACT ================= */
+
+.contact {
+  background: #0b1730;
+  color: white;
+}
+
+.contact-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 50px;
+}
+
+.contact p {
+  color: #bac8dc;
+}
+
+.contact-item {
+  padding: 18px 0;
+
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+
+.contact-item small {
+  display: block;
+
+  color: #8fa4c2;
+
+  margin-bottom: 4px;
+}
+
+.contact-item strong {
+  font-size: 19px;
+}
+
+/* ================= FOOTER ================= */
+
+footer {
+  background: #070f20;
+
+  color: #8292a9;
+
+  padding: 28px 0;
+
+  font-size: 13px;
+}
+
+.footer-inner {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 20px;
+}
+
+/* ================= MOBILE ================= */
+
+@media(max-width: 900px) {
+
+  .nav-links {
+    display: none;
+  }
+
+  .hero-grid,
+  .special-grid,
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cards {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .country-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .process {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    letter-spacing: -2px;
+  }
+}
+
+@media(max-width: 600px) {
+
+  .container {
+    width: min(100% - 28px, 1160px);
+  }
+
+  section {
+    padding: 70px 0;
+  }
+
+  .hero {
+    padding: 75px 0;
+  }
+
+  .hero-card {
+    min-height: 330px;
+  }
+
+  .cards,
+  .country-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field.full {
+    grid-column: auto;
+  }
+
+  .price-box {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .form-wrapper {
+    padding: 22px;
+  }
+
+  .footer-inner {
+    flex-direction: column;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- ================= HEADER ================= -->
+
+<header>
+  <div class="container nav">
+
+    <a href="#" class="logo">
+      ${CONFIG.siteName}<span>.</span>
+    </a>
+
+    <nav class="nav-links">
+      <a href="#programs">Программы</a>
+      <a href="#countries">Страны</a>
+      <a href="#how">Как это работает</a>
+      <a href="#apply" class="nav-button">Подать заявку</a>
+    </nav>
+
+  </div>
+</header>
+
+
+<!-- ================= HERO ================= -->
+
+<section class="hero">
+
+  <div class="container hero-grid">
+
+    <div>
+
+      <div class="badge">
+        Международное образование
+      </div>
+
+      <h1>
+        ${CONFIG.slogan}
+      </h1>
+
+      <p class="hero-description">
+        Образовательные возможности для школьников,
+        студентов, выпускников и взрослых —
+        с индивидуальным подбором программы.
+      </p>
+
+      <div class="buttons">
+
+        <a href="#apply" class="primary">
+          Подобрать программу
+        </a>
+
+        <a href="#programs" class="secondary">
+          Узнать больше
+        </a>
+
+      </div>
+
+      <div class="trust">
+
+        <span>🌍 7 направлений</span>
+        <span>🎓 Индивидуальный подбор</span>
+        <span>💎 Программы от ${CONFIG.priceFrom}</span>
+
+      </div>
+
+    </div>
+
+
+    <div class="hero-card">
+
+      <div>
+
+        <div class="hero-card-title">
+          Образование,
+          которое открывает возможности
+        </div>
+
+        <div class="hero-card-small">
+          Подберём направление под твою цель,
+          возраст и планы.
+        </div>
+
+      </div>
+
+      <div class="earth">
+        🌍
+      </div>
+
+      <div class="hero-card-small">
+        Школа → Онлайн → Выпуск → Международное образование
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ================= SPECIAL 11 CLASS ================= -->
+
+<section class="special">
+
+  <div class="container special-grid">
+
+    <div>
+
+      <div class="section-label">
+        Для 11 класса
+      </div>
+
+      <h2>
+        Не жди окончания школы —
+        начни заранее.
+      </h2>
+
+      <p class="section-description">
+        Учись в школе и параллельно начинай
+        обучение онлайн.
+      </p>
+
+      <p class="section-description" style="margin-top:15px;">
+        После окончания школы ты уже не начинаешь
+        с нуля — часть программы может быть пройдена
+        заранее. В зависимости от требований выбранной
+        программы это может позволить сэкономить
+        до 1 года обучения.
+      </p>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-number">1</div>
+          <span>Учёба в школе</span>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <span>Онлайн-обучение параллельно</span>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <span>Выпуск из школы</span>
+        </div>
+
+        <div class="step">
+          <div class="step-number">4</div>
+          <span>Продолжение обучения за рубежом</span>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div>
+
+      <div class="hero-card">
+
+        <div class="hero-card-title">
+          Возможность выиграть
+        </div>
+
+        <div style="font-size:72px;font-weight:900;">
+          до 1
+        </div>
+
+        <div style="font-size:25px;font-weight:800;">
+          года обучения
+        </div>
+
+        <div class="hero-card-small">
+          В зависимости от выбранной программы
+          и выполнения её требований.
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ================= PROGRAMS ================= -->
+
+<section id="programs">
+
+  <div class="container">
+
+    <div class="section-label">
+      Для кого
+    </div>
+
+    <h2>
+      Возможности для разных целей
+    </h2>
+
+    <p class="section-description">
+      Неважно, где ты находишься сейчас.
+      Главное — куда ты хочешь прийти.
+    </p>
+
+
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-icon">🎒</div>
+        <h3>Школьники</h3>
+        <p>
+          Международные программы и возможность
+          начать обучение ещё во время школы.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🎓</div>
+        <h3>Студенты</h3>
+        <p>
+          Продолжение обучения и международные
+          образовательные возможности.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🚀</div>
+        <h3>Выпускники</h3>
+        <p>
+          Подбор направления для дальнейшего
+          образования и развития.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">💼</div>
+        <h3>Взрослые</h3>
+        <p>
+          Возможность совмещать обучение,
+          развитие и профессиональные цели.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ================= COUNTRIES ================= -->
+
+<section id="countries" class="countries">
+
+  <div class="container">
+
+    <div class="section-label">
+      Международные направления
+    </div>
+
+    <h2>
+      Образование за пределами одной страны
+    </h2>
+
+    <p class="section-description">
+      Подберём направление в зависимости
+      от твоих целей и требований программы.
+    </p>
+
+
+    <div class="country-grid">
+
+      ${CONFIG.countries.map((country, index) => `
+        <div class="country">
+          ${["🇬🇧","🇺🇸","🇨🇦","🇦🇺","🇩🇪","🇦🇪","🇹🇷"][index]}
+          ${country}
+          <small>Международные программы</small>
+        </div>
+      `).join("")}
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ================= HOW ================= -->
+
+<section id="how">
+
+  <div class="container">
+
+    <div class="section-label">
+      Как это работает
+    </div>
+
+    <h2>
+      От заявки до подходящей программы
+    </h2>
+
+
+    <div class="process">
+
+      <div class="process-item">
+
+        <div class="process-number">
+          ШАГ 01
+        </div>
+
+        <h3>
+          Оставляешь заявку
+        </h3>
+
+        <p style="color:#69768a;margin-top:10px;">
+          Рассказываешь о себе, возрасте,
+          цели и желаемом направлении.
+        </p>
+
+      </div>
+
+
+      <div class="process-item">
+
+        <div class="process-number">
+          ШАГ 02
+        </div>
+
+        <h3>
+          Получаешь консультацию
+        </h3>
+
+        <p style="color:#69768a;margin-top:10px;">
+          Специалист связывается с тобой
+          и подробно разбирает подходящие варианты.
+        </p>
+
+      </div>
+
+
+      <div class="process-item">
+
+        <div class="process-number">
+          ШАГ 03
+        </div>
+
+        <h3>
+          Выбираешь направление
+        </h3>
+
+        <p style="color:#69768a;margin-top:10px;">
+          После консультации определяются
+          дальнейшие шаги и подходящая программа.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <div class="price-box">
+
+      <div>
+
+        <div class="price">
+          от ${CONFIG.priceFrom}
+        </div>
+
+        <div class="price-note">
+          Стоимость зависит от выбранной программы
+          и индивидуальных условий.
+        </div>
+
+      </div>
+
+      <a href="#apply" class="primary">
+        Получить консультацию
+      </a>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ================= FORM ================= -->
+
+<section id="apply" class="form-section">
+
+  <div class="container">
+
+    <div style="text-align:center;">
+
+      <div class="section-label">
+        Заявка
+      </div>
+
+      <h2>
+        Узнай, какая программа подходит именно тебе
+      </h2>
+
+      <p class="section-description" style="margin:auto;">
+        Заполни короткую форму.
+        Специалист свяжется с тобой для консультации.
+      </p>
+
+    </div>
+
+
+    <div class="form-wrapper">
+
+      <form id="applicationForm">
+
+        <div class="form-grid">
+
+          <div class="field">
+
+            <label>Имя *</label>
+
+            <input
+              name="name"
+              placeholder="Ваше имя"
+              required
+            >
+
+          </div>
+
+
+          <div class="field">
+
+            <label>Кто вы? *</label>
+
+            <select name="type" required>
+
+              <option value="">
+                Выберите вариант
+              </option>
+
+              <option>Школьник</option>
+              <option>Студент</option>
+              <option>Выпускник школы</option>
+              <option>Родитель</option>
+              <option>Работаю / хочу совмещать учёбу и работу</option>
+              <option>Другое</option>
+
+            </select>
+
+          </div>
+
+
+          <div class="field">
+
+            <label>Возраст</label>
+
+            <input
+              name="age"
+              type="number"
+              min="10"
+              max="100"
+              placeholder="Ваш возраст"
+            >
+
+          </div>
+
+
+          <div class="field">
+
+            <label>Что вас интересует?</label>
+
+            <select name="goal">
+
+              <option value="">
+                Выберите цель
+              </option>
+
+              <option>Образование</option>
+              <option>Учёба за рубежом</option>
+              <option>Учёба + работа</option>
+              <option>Развитие и новые навыки</option>
+              <option>Пока не знаю — нужна консультация</option>
+
+            </select>
+
+          </div>
+
+
+          <div class="field">
+
+            <label>Желаемая страна</label>
+
+            <select name="country">
+
+              <option value="">
+                Выберите страну
+              </option>
+
+              ${CONFIG.countries.map(c =>
+                `<option>${c}</option>`
+              ).join("")}
+
+            </select>
+
+          </div>
+
+
+          <div class="field">
+
+            <label>Ориентировочный бюджет</label>
+
+            <select name="budget">
+
+              <option value="">
+                Выберите диапазон
+              </option>
+
+              <option>$5,000–$10,000</option>
+              <option>$10,000–$20,000</option>
+              <option>$20,000+</option>
+              <option>Не знаю — хочу консультацию</option>
+
+            </select>
+
+          </div>
+
+
+          <div class="field">
+
+            <label>Телефон / Telegram *</label>
+
+            <input
+              name="phone"
+              placeholder="+998 ..."
+              required
+            >
+
+          </div>
+
+
+          <div class="field">
+
+            <label>Ваш вопрос</label>
+
+            <input
+              name="message"
+              placeholder="Коротко расскажите о цели"
+            >
+
+          </div>
+
+        </div>
+
+
+        <!-- Honeypot -->
+
+        <input
+          name="website"
+          tabindex="-1"
+          autocomplete="off"
+          style="position:absolute;left:-9999px;"
+        >
+
+
+        <button class="submit" type="submit">
+          Отправить заявку
+        </button>
+
+
+        <div id="formStatus" class="form-status"></div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ================= CONTACT ================= -->
+
+<section class="contact">
+
+  <div class="container contact-grid">
+
+    <div>
+
+      <div class="section-label">
+        Контакты
+      </div>
+
+      <h2>
+        Остались вопросы?
+      </h2>
+
+      <p class="section-description">
+        Оставь заявку или свяжись с нами напрямую.
+      </p>
+
+    </div>
+
+
+    <div>
+
+      <div class="contact-item">
+
+        <small>Телефон</small>
+
+        <strong>
+          ${CONFIG.phone1}
+        </strong>
+
+      </div>
+
+
+      <div class="contact-item">
+
+        <small>Телефон</small>
+
+        <strong>
+          ${CONFIG.phone2}
+        </strong>
+
+      </div>
+
+
+      <div class="contact-item">
+
+        <small>Стоимость программ</small>
+
+        <strong>
+          От ${CONFIG.priceFrom}
+        </strong>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ================= FOOTER ================= -->
+
+<footer>
+
+  <div class="container footer-inner">
+
+    <div>
+      © 2026 ${CONFIG.siteName}
+    </div>
+
+    <div>
+      Международное образование
+    </div>
+
+  </div>
+
+</footer>
+
+
+<script>
+
+const form = document.getElementById("applicationForm");
+const status = document.getElementById("formStatus");
+
+form.addEventListener("submit", async function(event) {
+
+  event.preventDefault();
+
+  const submitButton = form.querySelector("button");
+
+  submitButton.disabled = true;
+  submitButton.textContent = "Отправляем...";
+
+  status.textContent = "";
+
+  const formData = new FormData(form);
+
+  const data = Object.fromEntries(formData.entries());
+
+  if (data.website) {
+    submitButton.disabled = false;
+    submitButton.textContent = "Отправить заявку";
+    return;
+  }
+
+  try {
+
+    const response = await fetch("/api/apply", {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify(data)
+
+    });
+
+    const result = await response.json();
+
+    if (result.ok) {
+
+      status.textContent =
+        "Спасибо! Ваша заявка принята. Наш специалист свяжется с вами.";
+
+      status.style.color = "#16834b";
+
+      form.reset();
+
+    } else {
+
+      status.textContent =
+        result.message || "Не удалось отправить заявку.";
+
+      status.style.color = "#c0392b";
+
+    }
+
+  } catch (error) {
+
+    status.textContent =
+      "Ошибка соединения. Попробуйте ещё раз.";
+
+    status.style.color = "#c0392b";
+
+  }
+
+  submitButton.disabled = false;
+  submitButton.textContent = "Отправить заявку";
+
+});
+
+</script>
+
+</body>
+</html>`;
+}
